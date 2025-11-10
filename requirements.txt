@@ -1,0 +1,21 @@
+# Telegram Bot (async)
+python-telegram-bot==22.5
+
+# Environment Variables
+python-dotenv==1.0.1
+
+# Async SQLite
+aiosqlite==0.20.0
+
+# Async I/O for subprocess operations (built-in asyncio will be used)
+# asyncio - built-in
+
+# For async file operations
+aiofiles==24.1.0
+
+# JSON processing (built-in)
+# json - built-in
+
+# Logging (built-in)
+# logging - built-in
+
