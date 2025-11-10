@@ -15,7 +15,7 @@
 
 ```bash
 cd /opt
-git clone https://github.com/KleoPadre/PrivteAWGTgBot.git AmneziaBot
+git clone https://github.com/KleoPadre/PrivateAWGTgBot.git AmneziaBot
 cd AmneziaBot
 ```
 
