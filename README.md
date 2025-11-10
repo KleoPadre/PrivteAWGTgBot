@@ -229,16 +229,47 @@ sudo journalctl -u amneziabot -f
 2. Проверьте логи: `tail -f logs/bot.log`
 3. Проверьте правильность токена в `.env`
 
+### Ошибка "RuntimeError: threads can only be started once"
+
+Эта проблема уже исправлена в текущей версии. Если вы столкнулись с ней:
+1. Убедитесь, что используете последнюю версию кода
+2. Перезапустите бота: `sudo systemctl restart amneziabot`
+
+### Ошибка "docker: not found"
+
+Если в логах видите эту ошибку:
+1. Проверьте, что в `/etc/systemd/system/amneziabot.service` указан полный PATH:
+   ```
+   Environment="PATH=/opt/AmneziaBot/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+   ```
+2. Перезагрузите systemd: `sudo systemctl daemon-reload`
+3. Перезапустите бота: `sudo systemctl restart amneziabot`
+
 ### Ошибка при генерации конфига
 
-1. Проверьте, что AmneziaWG контейнер запущен: `docker ps`
+1. Проверьте, что AmneziaWG контейнер запущен: `docker ps | grep amnezia-awg`
 2. Проверьте права доступа к файлам конфигурации
 3. Проверьте логи контейнера: `docker logs amnezia-awg`
+4. Проверьте, что все параметры AmneziaWG заполнены в `.env`
 
 ### Пользователь не может получить конфиг
 
 1. Убедитесь, что Telegram ID пользователя добавлен в переменную `USERS` в `.env`
-2. Перезапустите бота после изменения `.env`
+2. Перезапустите бота после изменения `.env`: `sudo systemctl restart amneziabot`
+
+### Бот не запускается - "Отсутствуют обязательные переменные окружения"
+
+Проверьте, что в `.env` файле заполнены все обязательные поля:
+- `BOT_TOKEN` - токен от @BotFather
+- `ADMIN_ID` - ваш Telegram ID
+- `SERVER_ENDPOINT` - IP:порт вашего сервера (например: YOUR_SERVER_IP:443)
+- `SERVER_PUBLIC_KEY` - публичный ключ сервера AmneziaWG
+- `PRESHARED_KEY` - preshared key из конфигурации сервера
+
+Эти параметры можно получить из конфигурации сервера:
+```bash
+docker exec amnezia-awg cat /opt/amnezia/awg/wg0.conf
+```
 
 ## Разработка
 

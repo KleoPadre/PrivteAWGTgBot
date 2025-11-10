@@ -1,6 +1,7 @@
 """
 Репозиторий для работы с базой данных
 """
+import aiosqlite
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 
@@ -30,7 +31,8 @@ class UserRepository:
         Returns:
             int: ID созданного пользователя
         """
-        async with await db.get_connection() as conn:
+        async with aiosqlite.connect(db.db_path) as conn:
+            conn.row_factory = aiosqlite.Row
             cursor = await conn.execute(
                 """
                 INSERT OR IGNORE INTO users (telegram_id, username, first_name, last_name)
@@ -62,7 +64,8 @@ class UserRepository:
         Returns:
             Optional[Dict[str, Any]]: Данные пользователя или None
         """
-        async with await db.get_connection() as conn:
+        async with aiosqlite.connect(db.db_path) as conn:
+            conn.row_factory = aiosqlite.Row
             cursor = await conn.execute(
                 "SELECT * FROM users WHERE telegram_id = ?",
                 (telegram_id,)
@@ -78,7 +81,8 @@ class UserRepository:
         Returns:
             List[Dict[str, Any]]: Список пользователей
         """
-        async with await db.get_connection() as conn:
+        async with aiosqlite.connect(db.db_path) as conn:
+            conn.row_factory = aiosqlite.Row
             cursor = await conn.execute("SELECT * FROM users ORDER BY created_at DESC")
             rows = await cursor.fetchall()
             return [dict(row) for row in rows]
@@ -110,7 +114,8 @@ class ConfigRepository:
         Returns:
             int: ID созданной конфигурации
         """
-        async with await db.get_connection() as conn:
+        async with aiosqlite.connect(db.db_path) as conn:
+            conn.row_factory = aiosqlite.Row
             cursor = await conn.execute(
                 """
                 INSERT INTO configs 
@@ -136,7 +141,8 @@ class ConfigRepository:
         Returns:
             Optional[Dict[str, Any]]: Данные конфигурации или None
         """
-        async with await db.get_connection() as conn:
+        async with aiosqlite.connect(db.db_path) as conn:
+            conn.row_factory = aiosqlite.Row
             cursor = await conn.execute(
                 "SELECT * FROM configs WHERE user_id = ? AND device_type = ?",
                 (user_id, device_type)
@@ -155,7 +161,8 @@ class ConfigRepository:
         Returns:
             List[Dict[str, Any]]: Список конфигураций
         """
-        async with await db.get_connection() as conn:
+        async with aiosqlite.connect(db.db_path) as conn:
+            conn.row_factory = aiosqlite.Row
             cursor = await conn.execute(
                 "SELECT * FROM configs WHERE user_id = ? ORDER BY created_at DESC",
                 (user_id,)
@@ -171,7 +178,8 @@ class ConfigRepository:
         Returns:
             List[Dict[str, Any]]: Список всех конфигураций
         """
-        async with await db.get_connection() as conn:
+        async with aiosqlite.connect(db.db_path) as conn:
+            conn.row_factory = aiosqlite.Row
             cursor = await conn.execute(
                 """
                 SELECT c.*, u.telegram_id, u.username 
@@ -200,7 +208,8 @@ class RequestRepository:
         Returns:
             int: ID записи
         """
-        async with await db.get_connection() as conn:
+        async with aiosqlite.connect(db.db_path) as conn:
+            conn.row_factory = aiosqlite.Row
             cursor = await conn.execute(
                 "INSERT INTO requests (user_id, device_type, action) VALUES (?, ?, ?)",
                 (user_id, device_type, action)
@@ -220,7 +229,8 @@ class RequestRepository:
         Returns:
             List[Dict[str, Any]]: История запросов
         """
-        async with await db.get_connection() as conn:
+        async with aiosqlite.connect(db.db_path) as conn:
+            conn.row_factory = aiosqlite.Row
             cursor = await conn.execute(
                 """
                 SELECT * FROM requests 
@@ -244,7 +254,8 @@ class RequestRepository:
         Returns:
             List[Dict[str, Any]]: История запросов
         """
-        async with await db.get_connection() as conn:
+        async with aiosqlite.connect(db.db_path) as conn:
+            conn.row_factory = aiosqlite.Row
             cursor = await conn.execute(
                 """
                 SELECT r.*, u.telegram_id, u.username 
@@ -266,7 +277,8 @@ class RequestRepository:
         Returns:
             Dict[str, Any]: Статистика
         """
-        async with await db.get_connection() as conn:
+        async with aiosqlite.connect(db.db_path) as conn:
+            conn.row_factory = aiosqlite.Row
             # Общее количество пользователей
             cursor = await conn.execute("SELECT COUNT(*) FROM users")
             total_users = (await cursor.fetchone())[0]

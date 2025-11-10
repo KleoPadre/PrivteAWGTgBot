@@ -137,12 +137,48 @@ sudo journalctl -u amneziabot -n 50 --no-pager
 sudo systemctl restart amneziabot
 ```
 
-### Ошибка "BOT_TOKEN not found"
+### Ошибка "BOT_TOKEN not found" или "Отсутствуют обязательные переменные окружения"
 
 Убедитесь, что файл `.env` создан и заполнен правильно:
 
 ```bash
-cat /opt/AmneziaBot/.env | grep BOT_TOKEN
+cat /opt/AmneziaBot/.env
+```
+
+Должны быть заполнены все обязательные поля:
+- BOT_TOKEN
+- ADMIN_ID
+- SERVER_ENDPOINT
+- SERVER_PUBLIC_KEY
+- PRESHARED_KEY
+
+### Ошибка "docker: not found"
+
+Если в логах видите эту ошибку, проверьте systemd сервис:
+
+```bash
+# Проверить содержимое сервиса
+cat /etc/systemd/system/amneziabot.service | grep PATH
+
+# Должно быть:
+# Environment="PATH=/opt/AmneziaBot/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+# Если PATH неправильный, перезагрузите конфигурацию
+sudo systemctl daemon-reload
+sudo systemctl restart amneziabot
+```
+
+### Ошибка "RuntimeError: threads can only be started once"
+
+Эта проблема исправлена в текущей версии. Если столкнулись с ней:
+
+```bash
+# Убедитесь, что используете последний код
+cd /opt/AmneziaBot
+git pull
+
+# Перезапустите бота
+sudo systemctl restart amneziabot
 ```
 
 ### Пользователь не может получить доступ
@@ -151,7 +187,10 @@ cat /opt/AmneziaBot/.env | grep BOT_TOKEN
    ```bash
    cat /opt/AmneziaBot/.env | grep USERS
    ```
-2. Перезапустите бота после изменений
+2. Перезапустите бота после изменений:
+   ```bash
+   sudo systemctl restart amneziabot
+   ```
 
 ### AmneziaWG не работает
 
