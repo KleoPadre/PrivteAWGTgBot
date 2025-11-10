@@ -7,6 +7,7 @@ from telegram.ext import ContextTypes
 from src.services.config_generator import config_generator
 from src.utils.logger import logger
 from src.utils.decorators import authorized_only, log_action
+from src.utils.transliterate import generate_safe_username
 
 
 @authorized_only
@@ -66,10 +67,17 @@ async def _send_config(update: Update, device_type: str, device_name: str) -> No
     )
     
     try:
+        # Генерируем безопасное имя пользователя
+        safe_username = user.username or generate_safe_username(
+            first_name=user.first_name,
+            last_name=user.last_name,
+            telegram_id=user.id
+        )
+        
         # Генерируем конфигурацию
         config_path = await config_generator.generate_client_config(
             telegram_id=user.id,
-            username=user.username or f"user{user.id}",
+            username=safe_username,
             device_type=device_type,
             first_name=user.first_name,
             last_name=user.last_name
