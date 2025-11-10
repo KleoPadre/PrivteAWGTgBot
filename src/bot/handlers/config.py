@@ -87,7 +87,7 @@ async def _send_config(update: Update, device_type: str, device_name: str) -> No
         with open(config_path, 'rb') as config_file:
             await update.message.reply_document(
                 document=config_file,
-                filename=f"{user.username or f'user{user.id}'}_{device_type}.conf",
+                filename=f"{user.username or f'user{user.id}'}{device_type.capitalize()}.conf",
                 caption=f"✅ Конфигурация для {device_name} готова!\n\n"
                         f"📝 Импортируйте этот файл в приложение AmneziaWG.\n"
                         f"🔒 Храните конфигурацию в безопасности."
