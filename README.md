@@ -1,4 +1,4 @@
-# AmneziaWG Telegram Bot
+# AmneziaWG Config Bot
 
 Telegram бот для автоматической выдачи конфигурационных файлов AmneziaWG пользователям.
 
@@ -265,7 +265,7 @@ sudo journalctl -u amneziabot -f
 Проверьте, что в `.env` файле заполнены все обязательные поля:
 - `BOT_TOKEN` - токен от @BotFather
 - `ADMIN_ID` - ваш Telegram ID
-- `SERVER_ENDPOINT` - IP:порт вашего сервера (например: YOUR_SERVER_IP:443)
+- `SERVER_ENDPOINT` - IP:порт вашего сервера (например: `your_server_ip:443`)
 - `SERVER_PUBLIC_KEY` - публичный ключ сервера AmneziaWG
 - `PRESHARED_KEY` - preshared key из конфигурации сервера
 
@@ -296,11 +296,13 @@ python main.py
 
 Все изменения документируются в директории `changelogs/`.
 
-## Автор
-
-AmneziaWG Telegram Bot
-
 ## Лицензия
 
-Этот проект создан для использования с AmneziaVPN.
+MIT License with Non-Commercial Clause
+
+Разрешено свободное использование, модификация и распространение **исключительно в некоммерческих целях**.
+
+Коммерческое использование запрещено без явного письменного разрешения автора.
+
+Подробнее см. файл [LICENSE](LICENSE).
 

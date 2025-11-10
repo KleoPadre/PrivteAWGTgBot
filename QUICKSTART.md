@@ -148,7 +148,7 @@ cat /opt/AmneziaBot/.env
 Должны быть заполнены все обязательные поля:
 - BOT_TOKEN
 - ADMIN_ID
-- SERVER_ENDPOINT
+- SERVER_ENDPOINT (ваш_ip:порт)
 - SERVER_PUBLIC_KEY
 - PRESHARED_KEY
 
