@@ -9,7 +9,10 @@ from src.config.settings import settings
 from src.database.models import db
 from src.bot.handlers.start import start_command
 from src.bot.handlers.config import handle_phone_config, handle_laptop_config, handle_router_config
-from src.bot.handlers.admin import stats_command, users_command, handle_stats, handle_users
+from src.bot.handlers.admin import (
+    stats_command, users_command, reboot_command,
+    handle_stats, handle_users, handle_reboot_server
+)
 from src.bot.filters import authorized_users_filter, admin_filter
 from src.utils.logger import logger
 
@@ -70,6 +73,7 @@ def main() -> None:
     application.add_handler(CommandHandler("start", start_command))
     application.add_handler(CommandHandler("stats", stats_command))
     application.add_handler(CommandHandler("users", users_command))
+    application.add_handler(CommandHandler("reboot", reboot_command))
     
     # Регистрируем обработчики кнопок для обычных пользователей
     application.add_handler(
@@ -102,6 +106,12 @@ def main() -> None:
         MessageHandler(
             filters.TEXT & filters.Regex("^👥 Пользователи$") & admin_filter,
             handle_users
+        )
+    )
+    application.add_handler(
+        MessageHandler(
+            filters.TEXT & filters.Regex("^🔄 Перезагрузить сервер$") & admin_filter,
+            handle_reboot_server
         )
     )
     

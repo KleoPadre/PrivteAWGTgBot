@@ -1,6 +1,7 @@
 """
 Обработчики админ-команд
 """
+import asyncio
 from telegram import Update
 from telegram.ext import ContextTypes
 from datetime import datetime
@@ -147,4 +148,72 @@ async def users_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         context: Контекст бота
     """
     await handle_users(update, context)
+
+
+@admin_only
+@log_action("admin_reboot_server")
+async def handle_reboot_server(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Обработчик запроса на перезагрузку сервера
+    
+    Args:
+        update: Объект обновления
+        context: Контекст бота
+    """
+    try:
+        # Отправляем предупреждение
+        warning_message = await update.message.reply_text(
+            "⚠️ <b>ВНИМАНИЕ!</b>\n\n"
+            "Вы запросили перезагрузку сервера.\n\n"
+            "🔴 Это приведет к:\n"
+            "• Остановке всех сервисов\n"
+            "• Перезагрузке Ubuntu сервера\n"
+            "• Временной недоступности бота (~1-2 минуты)\n\n"
+            "✅ Бот автоматически запустится после перезагрузки.\n\n"
+            "⏳ Перезагрузка начнется через 5 секунд...",
+            parse_mode='HTML'
+        )
+        
+        logger.warning(f"Администратор {update.effective_user.id} запросил перезагрузку сервера")
+        
+        # Ждем 5 секунд
+        await asyncio.sleep(5)
+        
+        # Отправляем финальное сообщение
+        await update.message.reply_text(
+            "🔄 <b>Перезагружаю сервер...</b>\n\n"
+            "До встречи через минуту! 👋",
+            parse_mode='HTML'
+        )
+        
+        logger.critical("Выполняется перезагрузка сервера по запросу администратора")
+        
+        # Выполняем перезагрузку
+        process = await asyncio.create_subprocess_shell(
+            "sudo shutdown -r now",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        
+        await process.wait()
+        
+    except Exception as e:
+        logger.error(f"Ошибка при перезагрузке сервера: {e}", exc_info=True)
+        await update.message.reply_text(
+            "❌ Ошибка при попытке перезагрузки сервера.\n"
+            "Проверьте логи для подробностей."
+        )
+
+
+@admin_only
+@log_action("admin_reboot_command")
+async def reboot_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Обработчик команды /reboot
+    
+    Args:
+        update: Объект обновления
+        context: Контекст бота
+    """
+    await handle_reboot_server(update, context)
 
