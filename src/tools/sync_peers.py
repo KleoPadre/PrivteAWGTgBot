@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """
-Скрипт синхронизации peer'ов между базой бота и сервером AmneziaWG
-Восстанавливает удаленные peer'ы при перезаписи конфигурации приложением
+Умная синхронизация peer'ов между базой бота и сервером AmneziaWG
+- Восстанавливает peer'ы при случайном удалении (сбой, перезапись)
+- Удаляет из базы при намеренном удалении через приложение AmneziaVPN
 """
 import asyncio
 import json
 import subprocess
+import aiosqlite
 from pathlib import Path
 import sys
 
@@ -13,6 +15,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from src.database.repository import ConfigRepository
+from src.database.models import db
 from src.services.awg_manager import awg_manager
 from src.config.settings import settings
 from src.utils.logger import logger
@@ -31,19 +34,50 @@ async def get_current_peers():
     return [p for p in peers if p]
 
 
+async def get_clients_table():
+    """Получить clientsTable (список клиентов в приложении)"""
+    try:
+        read_cmd = f"docker exec {settings.AWG_CONTAINER} cat {settings.AWG_CONFIG_PATH}/clientsTable"
+        stdout, stderr, code = await awg_manager._execute_command(read_cmd)
+        
+        if code != 0:
+            logger.warning("ClientsTable не найдена или пуста")
+            return {}
+        
+        clients = json.loads(stdout) if stdout else []
+        # Возвращаем словарь: {publicKey: clientData}
+        return {c.get('clientId'): c for c in clients}
+        
+    except Exception as e:
+        logger.error(f"Ошибка чтения clientsTable: {e}")
+        return {}
+
+
 async def get_bot_configs():
     """Получить все активные конфигурации из базы бота"""
     configs = await ConfigRepository.get_all_configs()
     return configs
 
 
-async def sync_peer(config):
-    """Добавить peer на сервер"""
+async def delete_config_from_db(config_id: int, config_name: str):
+    """Удалить конфигурацию из базы бота"""
+    try:
+        async with aiosqlite.connect(db.db_path) as conn:
+            await conn.execute("DELETE FROM configs WHERE id = ?", (config_id,))
+            await conn.commit()
+        logger.info(f"🗑️  Удален из базы бота: {config_name}")
+        return True
+    except Exception as e:
+        logger.error(f"Ошибка удаления конфига из базы: {e}")
+        return False
+
+
+async def restore_peer(config):
+    """Восстановить peer на сервере"""
     try:
         # Проверяем, есть ли уже этот peer
         current_peers = await get_current_peers()
         if config['client_public_key'] in current_peers:
-            logger.debug(f"Peer {config['config_name']} уже существует")
             return False
         
         # Убираем .conf из имени для красивого отображения
@@ -64,44 +98,69 @@ async def sync_peer(config):
         return False
 
 
-async def sync_all():
-    """Синхронизировать всех peer'ов"""
-    logger.info("🔄 Начинаем синхронизацию peer'ов...")
+async def smart_sync():
+    """
+    Умная синхронизация:
+    - Если peer'а нет НА СЕРВЕРЕ и НЕТ В CLIENTSTABLE → удалить из базы бота (намеренное удаление)
+    - Если peer'а нет НА СЕРВЕРЕ, но ЕСТЬ В CLIENTSTABLE → восстановить (случайный сбой)
+    """
+    logger.info("🔄 Начинаем умную синхронизацию peer'ов...")
     
-    # Получаем список peer'ов на сервере
+    # Получаем данные из всех источников
     current_peers = await get_current_peers()
-    logger.info(f"На сервере сейчас {len(current_peers)} peer(s)")
-    
-    # Получаем список конфигураций из базы
+    clients_table = await get_clients_table()
     bot_configs = await get_bot_configs()
-    logger.info(f"В базе бота {len(bot_configs)} конфигураций")
     
-    # Проверяем каждую конфигурацию
+    logger.info(f"На сервере: {len(current_peers)} peer(s)")
+    logger.info(f"В clientsTable: {len(clients_table)} записей")
+    logger.info(f"В базе бота: {len(bot_configs)} конфигураций")
+    
     restored = 0
+    deleted = 0
+    
     for config in bot_configs:
-        if config['client_public_key'] not in current_peers:
-            logger.warning(f"⚠️  Peer {config['config_name']} отсутствует на сервере, восстанавливаем...")
-            if await sync_peer(config):
-                restored += 1
-                # Небольшая задержка между добавлениями
+        public_key = config['client_public_key']
+        config_name = config['config_name']
+        
+        on_server = public_key in current_peers
+        in_clients_table = public_key in clients_table
+        
+        if not on_server:
+            if not in_clients_table:
+                # Peer'а нет НИ на сервере, НИ в clientsTable
+                # = НАМЕРЕННОЕ УДАЛЕНИЕ через приложение
+                logger.warning(f"🗑️  {config_name}: удален через приложение, удаляем из базы бота")
+                if await delete_config_from_db(config['id'], config_name):
+                    deleted += 1
+                    
+            else:
+                # Peer'а нет на сервере, НО ЕСТЬ в clientsTable
+                # = СЛУЧАЙНОЕ УДАЛЕНИЕ (сбой, перезапись)
+                logger.warning(f"🔄 {config_name}: случайное удаление, восстанавливаем...")
+                if await restore_peer(config):
+                    restored += 1
                 await asyncio.sleep(0.5)
     
-    if restored > 0:
-        logger.info(f"✅ Восстановлено {restored} peer(s)")
+    # Итоги
+    if restored > 0 or deleted > 0:
+        logger.info(f"📊 Итого: восстановлено {restored}, удалено из базы {deleted}")
     else:
-        logger.info("✅ Все peer'ы на месте, восстановление не требуется")
+        logger.info("✅ Все peer'ы синхронизированы, действий не требуется")
     
-    return restored
+    return restored, deleted
 
 
 async def watch_mode():
     """Режим постоянного мониторинга"""
-    logger.info("👁️  Запуск режима мониторинга...")
+    logger.info("👁️  Запуск режима умного мониторинга...")
     logger.info("Проверка каждые 30 секунд")
+    logger.info("🧠 Логика:")
+    logger.info("   • Нет на сервере + нет в clientsTable = намеренное удаление → удалить из базы")
+    logger.info("   • Нет на сервере + есть в clientsTable = случайный сбой → восстановить")
     
     while True:
         try:
-            await sync_all()
+            await smart_sync()
             await asyncio.sleep(30)  # Проверка каждые 30 секунд
         except KeyboardInterrupt:
             logger.info("\n⏹️  Остановка мониторинга")
@@ -115,16 +174,16 @@ async def main():
     """Главная функция"""
     import argparse
     
-    parser = argparse.ArgumentParser(description='Синхронизация peer\'ов AmneziaWG')
+    parser = argparse.ArgumentParser(description='Умная синхронизация peer\'ов AmneziaWG')
     parser.add_argument(
         '--watch',
         action='store_true',
-        help='Режим постоянного мониторинга'
+        help='Режим постоянного мониторинга (рекомендуется)'
     )
     parser.add_argument(
         '--once',
         action='store_true',
-        help='Однократная синхронизация (по умолчанию)'
+        help='Однократная синхронизация'
     )
     
     args = parser.parse_args()
@@ -132,7 +191,7 @@ async def main():
     if args.watch:
         await watch_mode()
     else:
-        await sync_all()
+        await smart_sync()
 
 
 if __name__ == "__main__":
@@ -141,4 +200,3 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("\n⏹️  Прервано пользователем")
         sys.exit(0)
-
