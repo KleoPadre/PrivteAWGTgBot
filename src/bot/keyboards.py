@@ -31,8 +31,7 @@ def get_admin_keyboard() -> ReplyKeyboardMarkup:
     """
     keyboard = [
         [KeyboardButton("📱 Для телефона"), KeyboardButton("💻 Для ноутбука"), KeyboardButton("🌐 Для роутера")],
-        [KeyboardButton("📊 Статистика"), KeyboardButton("👥 Пользователи")],
-        [KeyboardButton("🗑️ Управление конфигами"), KeyboardButton("🔄 Перезагрузить сервер")]
+        [KeyboardButton("📊 Статистика"), KeyboardButton("👥 Пользователи"), KeyboardButton("🔄 Перезагрузить сервер")]
     ]
     
     return ReplyKeyboardMarkup(
